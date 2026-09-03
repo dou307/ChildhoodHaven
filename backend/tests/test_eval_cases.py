@@ -13,7 +13,7 @@ CASES = json.loads((Path(__file__).parents[1] / "evals" / "cases.json").read_tex
 @pytest.mark.parametrize("case", CASES, ids=[case["id"] for case in CASES])
 @pytest.mark.asyncio
 async def test_regression_case(case: dict):
-    app = create_app(Settings(app_env="test", model_provider="mock"))
+    app = create_app(Settings(app_env="test", model_provider="mock", database_url=None))
     async with app.router.lifespan_context(app):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(

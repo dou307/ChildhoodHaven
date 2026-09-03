@@ -42,6 +42,7 @@ def install_exception_handlers(app: FastAPI) -> None:
             404: "not_found",
             409: "conflict",
             422: "unprocessable_request",
+            503: "service_unavailable",
         }.get(exc.status_code, "http_error")
         message = exc.detail if isinstance(exc.detail, str) else "请求未能完成"
         log_api_error(_route_template(request), exc.status_code, type(exc).__name__)

@@ -1,3 +1,4 @@
+import asyncio
 from secrets import compare_digest
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -36,6 +37,24 @@ async def health(request: Request) -> dict:
         "model": settings.bailian_model if settings.model_provider == "bailian" else None,
         "persistence": "postgres" if settings.database_url else "memory",
     }
+
+
+@router.get("/health/live")
+async def liveness() -> dict:
+    return {"status": "ok"}
+
+
+@router.get("/health/ready")
+async def readiness(request: Request) -> dict:
+    try:
+        async with asyncio.timeout(2):
+            await request.app.state.memory_repository.ping()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="服务依赖尚未就绪",
+        ) from exc
+    return {"status": "ready"}
 
 
 @router.post("/conversations/{conversation_id}/turns", response_model=TurnResponse)

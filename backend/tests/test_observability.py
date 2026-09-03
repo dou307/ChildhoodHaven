@@ -40,7 +40,7 @@ def observability_logs(caplog):
 async def test_observability_records_request_and_agent_latency_without_private_content(
     observability_logs,
 ):
-    app = create_app(Settings(app_env="test", model_provider="mock"))
+    app = create_app(Settings(app_env="test", model_provider="mock", database_url=None))
     private_message = "只有家长可以知道的秘密内容"
 
     async with app.router.lifespan_context(app):
@@ -82,7 +82,7 @@ class FailingProvider(MockProvider):
 
 @pytest.mark.asyncio
 async def test_observability_records_error_type_without_exception_message(observability_logs):
-    app = create_app(Settings(app_env="test", model_provider="mock"))
+    app = create_app(Settings(app_env="test", model_provider="mock", database_url=None))
     private_message = "不应进入错误日志的儿童原话"
 
     async with app.router.lifespan_context(app):

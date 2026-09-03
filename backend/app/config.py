@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "童心驿站 Agent"
-    app_env: Literal["development", "test", "production"] = "development"
+    app_env: Literal["development", "test", "staging", "production"] = "development"
     model_provider: Literal["mock", "bailian"] = "mock"
     dashscope_api_key: SecretStr | None = None
     bailian_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
@@ -29,16 +29,20 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_configuration(self) -> "Settings":
-        if self.app_env != "production":
+        if self.app_env not in {"staging", "production"}:
             return self
-        if self.model_provider != "bailian":
-            raise ValueError("Production requires MODEL_PROVIDER=bailian")
-        if self.dashscope_api_key is None or not self.dashscope_api_key.get_secret_value().strip():
-            raise ValueError("Production requires DASHSCOPE_API_KEY")
         if not self.database_url:
-            raise ValueError("Production requires DATABASE_URL")
+            raise ValueError(f"{self.app_env.title()} requires DATABASE_URL")
         if self.app_api_token is None or not self.app_api_token.get_secret_value().strip():
-            raise ValueError("Production requires APP_API_TOKEN")
+            raise ValueError(f"{self.app_env.title()} requires APP_API_TOKEN")
+        if self.app_env == "production":
+            if self.model_provider != "bailian":
+                raise ValueError("Production requires MODEL_PROVIDER=bailian")
+            if (
+                self.dashscope_api_key is None
+                or not self.dashscope_api_key.get_secret_value().strip()
+            ):
+                raise ValueError("Production requires DASHSCOPE_API_KEY")
         return self
 
 

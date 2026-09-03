@@ -8,7 +8,7 @@ from app.main import create_app
 
 @pytest.fixture
 async def client():
-    app = create_app(Settings(app_env="test", model_provider="mock"))
+    app = create_app(Settings(app_env="test", model_provider="mock", database_url=None))
     async with app.router.lifespan_context(app):
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
@@ -33,6 +33,30 @@ async def test_health_exposes_model_mode(client: AsyncClient):
     assert response.json()["model_provider"] == "mock"
     assert response.headers["x-request-id"]
     assert float(response.headers["x-response-time-ms"]) >= 0
+
+
+@pytest.mark.asyncio
+async def test_liveness_and_readiness_are_separate(client: AsyncClient):
+    live = await client.get("/api/v1/health/live")
+    ready = await client.get("/api/v1/health/ready")
+
+    assert live.status_code == 200
+    assert live.json() == {"status": "ok"}
+    assert ready.status_code == 200
+    assert ready.json() == {"status": "ready"}
+
+
+@pytest.mark.asyncio
+async def test_readiness_reports_dependency_failure(client: AsyncClient):
+    class UnavailableRepository:
+        async def ping(self) -> None:
+            raise RuntimeError("database unavailable")
+
+    client._transport.app.state.memory_repository = UnavailableRepository()
+    response = await client.get("/api/v1/health/ready")
+
+    assert response.status_code == 503
+    assert response.json()["code"] == "service_unavailable"
 
 
 @pytest.mark.asyncio
@@ -244,10 +268,59 @@ def test_bailian_mode_requires_key():
         )
 
 
+def test_staging_allows_explicit_mock_with_database_and_api_token():
+    settings = Settings(
+        app_env="staging",
+        model_provider="mock",
+        database_url="postgresql://example.invalid/childhood_haven",
+        app_api_token=SecretStr("staging-token"),
+    )
+
+    assert settings.app_env == "staging"
+    assert settings.model_provider == "mock"
+
+
+def test_staging_requires_database_and_api_token():
+    with pytest.raises(ValueError, match="Staging requires DATABASE_URL"):
+        Settings(
+            app_env="staging",
+            model_provider="mock",
+            database_url=None,
+            app_api_token=None,
+        )
+
+
+def test_production_requires_bailian_and_api_key():
+    common = {
+        "app_env": "production",
+        "database_url": "postgresql://example.invalid/childhood_haven",
+        "app_api_token": SecretStr("production-token"),
+    }
+
+    with pytest.raises(ValueError, match="Production requires MODEL_PROVIDER=bailian"):
+        Settings(model_provider="mock", **common)
+
+    with pytest.raises(ValueError, match="Production requires DASHSCOPE_API_KEY"):
+        Settings(model_provider="bailian", dashscope_api_key=None, **common)
+
+    with pytest.raises(ValueError, match="Staging requires APP_API_TOKEN"):
+        Settings(
+            app_env="staging",
+            model_provider="mock",
+            database_url="postgresql://example.invalid/childhood_haven",
+            app_api_token=None,
+        )
+
+
 @pytest.mark.asyncio
 async def test_configured_api_token_is_required():
     app = create_app(
-        Settings(app_env="test", model_provider="mock", app_api_token=SecretStr("test-token"))
+        Settings(
+            app_env="test",
+            model_provider="mock",
+            database_url=None,
+            app_api_token=SecretStr("test-token"),
+        )
     )
     async with app.router.lifespan_context(app):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

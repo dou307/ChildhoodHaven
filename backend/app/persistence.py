@@ -15,6 +15,8 @@ from app.domain.models import ConfirmedMemory, MemoryCandidate, MemoryCategory
 
 
 class MemoryRepository(Protocol):
+    async def ping(self) -> None: ...
+
     async def add(self, child_id: str, candidate: MemoryCandidate) -> ConfirmedMemory: ...
 
     async def list_for_child(self, child_id: str) -> list[ConfirmedMemory]: ...
@@ -25,6 +27,9 @@ class MemoryRepository(Protocol):
 class InMemoryRepository:
     def __init__(self) -> None:
         self._items: dict[str, ConfirmedMemory] = {}
+
+    async def ping(self) -> None:
+        return None
 
     async def add(self, child_id: str, candidate: MemoryCandidate) -> ConfirmedMemory:
         item = ConfirmedMemory(
@@ -52,14 +57,21 @@ class PostgresMemoryRepository:
     def __init__(self, database_url: str) -> None:
         self._database_url = database_url
 
+    async def _connect(self) -> AsyncConnection:
+        return await AsyncConnection.connect(self._database_url, connect_timeout=2)
+
     async def check_ready(self) -> None:
         try:
-            async with await AsyncConnection.connect(self._database_url) as connection:
+            async with await self._connect() as connection:
                 await connection.execute("SELECT 1 FROM child_memories LIMIT 1")
         except UndefinedTable as exc:
             raise RuntimeError(
                 "Database schema is not migrated; run 'alembic upgrade head' first"
             ) from exc
+
+    async def ping(self) -> None:
+        async with await self._connect() as connection:
+            await connection.execute("SELECT 1")
 
     async def add(self, child_id: str, candidate: MemoryCandidate) -> ConfirmedMemory:
         item = ConfirmedMemory(
@@ -69,7 +81,7 @@ class PostgresMemoryRepository:
             category=candidate.category,
             created_at=datetime.now(UTC),
         )
-        async with await AsyncConnection.connect(self._database_url) as connection:
+        async with await self._connect() as connection:
             await connection.execute(
                 """
                 INSERT INTO child_memories (memory_id, child_id, summary, category, created_at)
@@ -80,7 +92,7 @@ class PostgresMemoryRepository:
         return item
 
     async def list_for_child(self, child_id: str) -> list[ConfirmedMemory]:
-        async with await AsyncConnection.connect(self._database_url) as connection:
+        async with await self._connect() as connection:
             cursor = await connection.execute(
                 """
                 SELECT memory_id, child_id, summary, category, created_at
@@ -103,7 +115,7 @@ class PostgresMemoryRepository:
         ]
 
     async def delete(self, child_id: str, memory_id: str) -> bool:
-        async with await AsyncConnection.connect(self._database_url) as connection:
+        async with await self._connect() as connection:
             cursor = await connection.execute(
                 "DELETE FROM child_memories WHERE child_id = %s AND memory_id = %s",
                 (child_id, memory_id),

@@ -57,6 +57,16 @@ uv run uvicorn app.main:app --port 8000 --no-access-log
 
 后端 Docker 镜像会在入口阶段自动执行 `alembic upgrade head`。结构化日志仅包含请求 ID、路由模板、状态码、Agent 节点名、耗时和错误类型，不记录儿童输入、昵称、记忆内容或路径中的实际 ID。
 
+公网联调使用 Caddy 作为唯一入口，API 端口不会直接发布到宿主机。当前可先用明确标识的 `staging + mock` 部署，百炼联调完成后再切换 `production + bailian`：
+
+```powershell
+Copy-Item .env.example .env
+# 修改 .env 中的 POSTGRES_PASSWORD、APP_API_TOKEN 和 DOMAIN
+docker compose up -d --build
+```
+
+完整服务器准备、HTTPS 验收、备份和升级命令见 `docs/deployment.md`。
+
 ## 测试
 
 ```powershell
@@ -80,9 +90,9 @@ cd harmony
 
 ## 当前验证边界
 
-- 已验证：25 个后端测试、严格 checkpoint 反序列化、Docker PostgreSQL 跨重启持久化、后端镜像自动迁移启动、真实 HTTP 冒烟请求、GitHub Actions CI、HarmonyOS 6.1.1(24) ArkTS 编译和未签名 HAP 打包。
+- 已验证：30 个后端测试、严格 checkpoint 反序列化、Docker PostgreSQL 跨重启持久化、后端镜像自动迁移启动、本地 Caddy HTTPS staging 全栈、真实 HTTP 冒烟请求、GitHub Actions CI、HarmonyOS 6.1.1(24) ArkTS 编译和未签名 HAP 打包。
 - 已编译但尚未真机验证：麦克风采集、离线中文识别、逐页离线 TTS、家长确认/查看/删除记忆界面。
-- 尚未验证：真实百炼 API 输出、HarmonyOS 真机安装和公网 HTTPS 联调。
+- 尚未验证：真实百炼 API 输出、HarmonyOS 真机安装和真实域名的公网 HTTPS 联调。
 - 尚未实现：家长身份认证、主动回访、绘本插画素材与朗读同步高亮。
 
 架构和复赛范围见 `docs/architecture.md`，一个月执行安排见 `docs/roadmap.md`。
