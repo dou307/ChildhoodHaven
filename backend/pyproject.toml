@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Agent backend for 童心驿站"
 requires-python = ">=3.12,<3.14"
 dependencies = [
+  "alembic>=1.15,<2",
   "fastapi>=0.115,<1",
   "httpx>=0.28,<1",
   "langgraph>=1.0,<2",
@@ -30,6 +31,9 @@ packages = ["app"]
 [tool.pytest.ini_options]
 addopts = "-q"
 asyncio_mode = "auto"
+markers = [
+  "postgres: requires TEST_DATABASE_URL and a migrated PostgreSQL database",
+]
 pythonpath = ["."]
 testpaths = ["tests"]
 

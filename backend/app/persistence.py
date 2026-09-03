@@ -8,6 +8,7 @@ from uuid import uuid4
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg import AsyncConnection
+from psycopg.errors import UndefinedTable
 
 from app.checkpointing import create_checkpoint_serializer
 from app.domain.models import ConfirmedMemory, MemoryCandidate, MemoryCategory
@@ -51,22 +52,14 @@ class PostgresMemoryRepository:
     def __init__(self, database_url: str) -> None:
         self._database_url = database_url
 
-    async def setup(self) -> None:
-        async with await AsyncConnection.connect(self._database_url) as connection:
-            await connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS child_memories (
-                    memory_id UUID PRIMARY KEY,
-                    child_id VARCHAR(64) NOT NULL,
-                    summary VARCHAR(200) NOT NULL,
-                    category VARCHAR(32) NOT NULL,
-                    created_at TIMESTAMPTZ NOT NULL
-                )
-                """
-            )
-            await connection.execute(
-                "CREATE INDEX IF NOT EXISTS idx_child_memories_child_id ON child_memories(child_id)"
-            )
+    async def check_ready(self) -> None:
+        try:
+            async with await AsyncConnection.connect(self._database_url) as connection:
+                await connection.execute("SELECT 1 FROM child_memories LIMIT 1")
+        except UndefinedTable as exc:
+            raise RuntimeError(
+                "Database schema is not migrated; run 'alembic upgrade head' first"
+            ) from exc
 
     async def add(self, child_id: str, candidate: MemoryCandidate) -> ConfirmedMemory:
         item = ConfirmedMemory(
@@ -134,7 +127,7 @@ async def open_persistence(database_url: str | None) -> AsyncIterator[Persistenc
         return
 
     repository = PostgresMemoryRepository(database_url)
-    await repository.setup()
+    await repository.check_ready()
     async with AsyncPostgresSaver.from_conn_string(
         database_url, serde=create_checkpoint_serializer()
     ) as checkpointer:
