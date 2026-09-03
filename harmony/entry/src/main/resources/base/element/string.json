@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "童心驿站儿童情绪陪伴 Agent"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "童心驿站主页面"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "童心驿站"
+    },
+    {
+      "name": "microphone_reason",
+      "value": "用于听取孩子主动讲述的内容并转换为文字"
+    }
+  ]
+}

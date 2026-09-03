@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+if [ -z "${DEVECO_STUDIO_HOME}" ]; then
+  echo "DEVECO_STUDIO_HOME is required" >&2
+  exit 1
+fi
+
+export DEVECO_SDK_HOME="${DEVECO_STUDIO_HOME}/sdk"
+export NODE_HOME="${DEVECO_STUDIO_HOME}/tools/node"
+exec "${DEVECO_STUDIO_HOME}/tools/hvigor/bin/hvigorw" "$@"
