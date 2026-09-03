@@ -51,6 +51,17 @@ async def test_request_id_is_echoed_and_validation_error_is_structured(client: A
 
 
 @pytest.mark.asyncio
+async def test_unsafe_request_id_is_replaced(client: AsyncClient):
+    response = await client.get(
+        "/api/v1/health",
+        headers={"X-Request-ID": "private child message"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["x-request-id"] != "private child message"
+
+
+@pytest.mark.asyncio
 async def test_agent_asks_when_information_is_missing(client: AsyncClient):
     response = await client.post(
         "/api/v1/conversations/conv-question/turns",

@@ -16,6 +16,8 @@
 8. HarmonyOS 端支持逐页离线 TTS 朗读，以及记忆候选确认、列表刷新和删除。
 9. 单个 HAP 内提供儿童模式和 PIN 保护的家长模式，儿童档案在本机持久化。
 10. 会话绑定儿童身份，并使用 `turn_id` 防止网络重试重复执行同一轮。
+11. 使用 Alembic 管理业务表，并通过 PostgreSQL 持久化长期记忆和 LangGraph 检查点。
+12. 输出不含儿童原文的结构化请求与 Agent 节点耗时、状态和错误类型日志。
 
 `mock` 模式只用于本地开发和自动化测试，所有响应都会明确标注模型模式。系统不会在百炼调用失败后静默返回伪造结果。
 
@@ -25,7 +27,7 @@
 cd backend
 uv sync --extra dev
 Copy-Item ..\.env.example ..\.env
-uv run uvicorn app.main:app --reload --port 8000
+uv run uvicorn app.main:app --reload --port 8000 --no-access-log
 ```
 
 访问：
@@ -43,6 +45,17 @@ DASHSCOPE_API_KEY=your-key
 API Key 不得提交到 Git。
 
 生产部署还必须设置 `DATABASE_URL`、`APP_API_TOKEN` 和 `POSTGRES_PASSWORD`。开发模式可以使用内存存储；生产模式缺少百炼、PostgreSQL 或 API 访问令牌配置时会拒绝启动。
+
+使用 PostgreSQL 时，启动应用前执行迁移：
+
+```powershell
+cd backend
+$env:DATABASE_URL = "postgresql://user:password@127.0.0.1:5432/childhood_haven"
+uv run alembic upgrade head
+uv run uvicorn app.main:app --port 8000 --no-access-log
+```
+
+后端 Docker 镜像会在入口阶段自动执行 `alembic upgrade head`。结构化日志仅包含请求 ID、路由模板、状态码、Agent 节点名、耗时和错误类型，不记录儿童输入、昵称、记忆内容或路径中的实际 ID。
 
 ## 测试
 
@@ -67,9 +80,9 @@ cd harmony
 
 ## 当前验证边界
 
-- 已验证：21 个后端行为测试、严格 checkpoint 反序列化、真实 HTTP 冒烟请求、HarmonyOS 6.1.1(24) ArkTS 编译和未签名 HAP 打包。
+- 已验证：25 个后端测试、严格 checkpoint 反序列化、Docker PostgreSQL 跨重启持久化、后端镜像自动迁移启动、真实 HTTP 冒烟请求、GitHub Actions CI、HarmonyOS 6.1.1(24) ArkTS 编译和未签名 HAP 打包。
 - 已编译但尚未真机验证：麦克风采集、离线中文识别、逐页离线 TTS、家长确认/查看/删除记忆界面。
-- 尚未验证：真实百炼 API 输出、PostgreSQL 容器、HarmonyOS 真机安装和公网 HTTPS 联调。
+- 尚未验证：真实百炼 API 输出、HarmonyOS 真机安装和公网 HTTPS 联调。
 - 尚未实现：家长身份认证、主动回访、绘本插画素材与朗读同步高亮。
 
 架构和复赛范围见 `docs/architecture.md`，一个月执行安排见 `docs/roadmap.md`。

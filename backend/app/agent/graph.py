@@ -1,4 +1,7 @@
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
+from functools import wraps
+from time import perf_counter
+from typing import Any
 
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -13,6 +16,7 @@ from app.domain.models import (
     ToolTraceItem,
     TurnResponse,
 )
+from app.observability import log_agent_node
 from app.providers.base import ModelProvider
 from app.services.safety import screen_safety
 
@@ -20,6 +24,29 @@ from app.services.safety import screen_safety
 def _trace(state: AgentState, node: str, summary: str) -> list[ToolTraceItem]:
     current = state.get("trace", [])
     return current + [ToolTraceItem(step=len(current) + 1, node=node, summary=summary)]
+
+
+def _observed_node(
+    name: str,
+    node: Callable[[AgentState], Awaitable[dict[str, Any]]],
+) -> Callable[[AgentState], Awaitable[dict[str, Any]]]:
+    @wraps(node)
+    async def observed(state: AgentState) -> dict[str, Any]:
+        started_at = perf_counter()
+        try:
+            result = await node(state)
+        except Exception as exc:
+            log_agent_node(
+                name,
+                (perf_counter() - started_at) * 1000,
+                "error",
+                type(exc).__name__,
+            )
+            raise
+        log_agent_node(name, (perf_counter() - started_at) * 1000, "ok")
+        return result
+
+    return observed
 
 
 def build_agent_graph(provider: ModelProvider, checkpointer=None):
@@ -143,7 +170,7 @@ def build_agent_graph(provider: ModelProvider, checkpointer=None):
         }
 
     builder = StateGraph(AgentState)
-    nodes: dict[str, Callable] = {
+    nodes: dict[str, Callable[[AgentState], Awaitable[dict[str, Any]]]] = {
         "safety_screen": safety_screen,
         "understand_context": understand_context,
         "decide": decide,
@@ -155,7 +182,7 @@ def build_agent_graph(provider: ModelProvider, checkpointer=None):
         "finalize": finalize,
     }
     for name, node in nodes.items():
-        builder.add_node(name, node)
+        builder.add_node(name, _observed_node(name, node))
 
     builder.add_edge(START, "safety_screen")
     builder.add_conditional_edges(

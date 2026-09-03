@@ -1,3 +1,4 @@
+import re
 from contextlib import asynccontextmanager
 from time import perf_counter
 from uuid import uuid4
@@ -9,8 +10,11 @@ from app.agent.graph import build_agent_graph
 from app.api.errors import install_exception_handlers
 from app.api.routes import router
 from app.config import Settings, get_settings
+from app.observability import bind_request_id, log_request, reset_request_id
 from app.persistence import open_persistence
 from app.providers import create_model_provider
+
+REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,64}$")
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -41,13 +45,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.middleware("http")
     async def attach_request_context(request: Request, call_next) -> Response:
         supplied_request_id = request.headers.get("x-request-id", "").strip()
-        request_id = supplied_request_id[:64] if supplied_request_id else str(uuid4())
+        request_id = (
+            supplied_request_id
+            if REQUEST_ID_PATTERN.fullmatch(supplied_request_id)
+            else str(uuid4())
+        )
         request.state.request_id = request_id
+        request_id_token = bind_request_id(request_id)
         started_at = perf_counter()
-        response = await call_next(request)
-        response.headers["X-Request-ID"] = request_id
-        response.headers["X-Response-Time-Ms"] = f"{(perf_counter() - started_at) * 1000:.1f}"
-        return response
+        try:
+            response = await call_next(request)
+            duration_ms = (perf_counter() - started_at) * 1000
+            response.headers["X-Request-ID"] = request_id
+            response.headers["X-Response-Time-Ms"] = f"{duration_ms:.1f}"
+            route = request.scope.get("route")
+            route_template = getattr(route, "path", "unmatched")
+            log_request(route_template, request.method, response.status_code, duration_ms)
+            return response
+        finally:
+            reset_request_id(request_id_token)
 
     install_exception_handlers(app)
     app.include_router(router)

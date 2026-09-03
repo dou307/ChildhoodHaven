@@ -1,15 +1,19 @@
-import logging
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-logger = logging.getLogger(__name__)
+from app.observability import log_api_error
 
 
 def _request_id(request: Request) -> str:
     return getattr(request.state, "request_id", "unknown")
+
+
+def _route_template(request: Request) -> str:
+    route = request.scope.get("route")
+    return getattr(route, "path", "unmatched")
 
 
 def _error_response(
@@ -40,12 +44,14 @@ def install_exception_handlers(app: FastAPI) -> None:
             422: "unprocessable_request",
         }.get(exc.status_code, "http_error")
         message = exc.detail if isinstance(exc.detail, str) else "请求未能完成"
+        log_api_error(_route_template(request), exc.status_code, type(exc).__name__)
         return _error_response(request, exc.status_code, code, message, headers=exc.headers)
 
     @app.exception_handler(RequestValidationError)
     async def handle_validation_exception(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
+        log_api_error(_route_template(request), 422, type(exc).__name__)
         return _error_response(
             request,
             422,
@@ -56,5 +62,5 @@ def install_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONResponse:
-        logger.exception("Unhandled API error request_id=%s", _request_id(request), exc_info=exc)
+        log_api_error(_route_template(request), 500, type(exc).__name__)
         return _error_response(request, 500, "internal_error", "服务暂时不可用，请稍后重试")

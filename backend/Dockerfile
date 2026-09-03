@@ -18,4 +18,4 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 8000
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD [".venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD [".venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
