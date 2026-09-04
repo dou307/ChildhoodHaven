@@ -5,7 +5,7 @@ import httpx
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the 童心驿站 HTTP smoke flow")
+    parser = argparse.ArgumentParser(description="Run the 童心译站 HTTP smoke flow")
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
     parser.add_argument("--token", default="")
     args = parser.parse_args()

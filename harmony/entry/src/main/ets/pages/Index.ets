@@ -327,7 +327,7 @@ struct Index {
       Column({ space: 20 }) {
         Row() {
           Column({ space: 4 }) {
-            Text('童心驿站').fontSize(28).fontWeight(FontWeight.Bold).fontColor('#24302B')
+            Text('童心译站').fontSize(28).fontWeight(FontWeight.Bold).fontColor('#24302B')
             Text(this.appMode === 'child' ? '小星星正在听' : '家长陪伴模式')
               .fontSize(14).fontColor('#5E6C65')
           }.alignItems(HorizontalAlign.Start)

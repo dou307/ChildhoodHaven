@@ -1,6 +1,6 @@
 # 小艺云 A2A 接入
 
-童心驿站保留 HarmonyOS 应用内入口，同时由同一套 FastAPI/LangGraph Agent 提供小艺云 A2A 入口。
+童心译站保留 HarmonyOS 应用内入口，同时由同一套 FastAPI/LangGraph Agent 提供小艺云 A2A 入口。
 
 ```text
 HarmonyOS 应用 -> /api/v1/conversations/{id}/turns -> LangGraph

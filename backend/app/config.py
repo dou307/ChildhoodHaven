@@ -12,7 +12,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "童心驿站 Agent"
+    app_name: str = "童心译站 Agent"
     app_env: Literal["development", "test", "staging", "production"] = "development"
     model_provider: Literal["mock", "bailian"] = "mock"
     dashscope_api_key: SecretStr | None = None

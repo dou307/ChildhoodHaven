@@ -2,15 +2,15 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "童心驿站儿童情绪陪伴 Agent"
+      "value": "童心译站儿童情绪陪伴 Agent"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "童心驿站主页面"
+      "value": "童心译站主页面"
     },
     {
       "name": "EntryAbility_label",
-      "value": "童心驿站"
+      "value": "童心译站"
     },
     {
       "name": "microphone_reason",

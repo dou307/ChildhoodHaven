@@ -6,7 +6,7 @@
     "buildTool": "hvigor",
     "directoryLevel": "project"
   },
-  "description": "童心驿站 HarmonyOS 客户端",
+  "description": "童心译站 HarmonyOS 客户端",
   "license": "Apache-2.0",
   "dependencies": {
     "@ohos/hvigor": "6.24.3",
