@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.domain.models import ConfirmedMemory, ConfirmMemoryRequest, TurnRequest, TurnResponse
+from app.services.agent_runtime import ConversationOwnershipError, run_agent_turn
 
 router = APIRouter(prefix="/api/v1")
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -64,43 +65,18 @@ async def create_turn(
     request: Request,
     _access: None = api_access_dependency,
 ) -> TurnResponse:
-    graph = request.app.state.agent_graph
-    graph_config = {"configurable": {"thread_id": conversation_id}}
-    snapshot = await graph.aget_state(graph_config)
-    previous_child = snapshot.values.get("child")
-    if previous_child is not None and previous_child.child_id != payload.child.child_id:
+    try:
+        return await run_agent_turn(
+            request.app.state.agent_graph,
+            request.app.state.memory_repository,
+            conversation_id,
+            payload,
+        )
+    except ConversationOwnershipError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="该会话已属于另一个儿童档案",
-        )
-    if (
-        payload.turn_id is not None
-        and snapshot.values.get("turn_id") == payload.turn_id
-        and snapshot.values.get("response") is not None
-    ):
-        return snapshot.values["response"]
-
-    confirmed_memories = await request.app.state.memory_repository.list_for_child(
-        payload.child.child_id
-    )
-    result = await graph.ainvoke(
-        {
-            "conversation_id": conversation_id,
-            "turn_id": payload.turn_id,
-            "child": payload.child,
-            "latest_message": payload.message,
-            "messages": [{"role": "child", "content": payload.message}],
-            "confirmed_memories": confirmed_memories,
-            "analysis": None,
-            "story": None,
-            "parent_guidance": None,
-            "memory_candidate": None,
-            "response": None,
-            "trace": [],
-        },
-        config=graph_config,
-    )
-    return result["response"]
+            detail=str(exc),
+        ) from exc
 
 
 @router.post(

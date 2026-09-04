@@ -18,6 +18,7 @@
 10. 会话绑定儿童身份，并使用 `turn_id` 防止网络重试重复执行同一轮。
 11. 使用 Alembic 管理业务表，并通过 PostgreSQL 持久化长期记忆和 LangGraph 检查点。
 12. 输出不含儿童原文的结构化请求与 Agent 节点耗时、状态和错误类型日志。
+13. 提供小艺云 A2A JSON-RPC/SSE 适配入口，与 HarmonyOS 应用复用同一套 Agent 大脑。
 
 `mock` 模式只用于本地开发和自动化测试，所有响应都会明确标注模型模式。系统不会在百炼调用失败后静默返回伪造结果。
 
@@ -34,6 +35,7 @@ uv run uvicorn app.main:app --reload --port 8000 --no-access-log
 
 - 健康检查：`http://127.0.0.1:8000/api/v1/health`
 - OpenAPI：`http://127.0.0.1:8000/docs`
+- 小艺云 A2A：`POST http://127.0.0.1:8000/api/v1/a2a`
 
 百炼真实调用与结构化输出联调按当前安排暂缓。后续启用时，在根目录 `.env` 中设置：
 
@@ -95,4 +97,5 @@ cd harmony
 - 尚未验证：真实百炼 API 输出、HarmonyOS 真机安装和真实域名的公网 HTTPS 联调。
 - 尚未实现：家长身份认证、主动回访、绘本插画素材与朗读同步高亮。
 
-架构和复赛范围见 `docs/architecture.md`，一个月执行安排见 `docs/roadmap.md`。
+架构和复赛范围见 `docs/architecture.md`，小艺双入口配置见 `docs/xiaoyi-cloud-a2a.md`，
+一个月执行安排见 `docs/roadmap.md`。

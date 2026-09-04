@@ -18,6 +18,9 @@
   -> HarmonyOS 端展示与朗读
 ```
 
+入口采用同一 Agent 双模式：HarmonyOS 应用继续调用业务 REST API；小艺通过云 A2A 的
+JSON-RPC/SSE Endpoint 调用同一套 LangGraph。A2A 层只负责协议转换，不复制业务决策。
+
 ## 为什么这是 Agent
 
 系统不是把输入直接拼成一个 Prompt。它维护会话状态，先理解环境，再根据状态选择动作和工具；不同风险和信息完整度会走不同路径，执行结果可通过 `tool_trace` 检查。

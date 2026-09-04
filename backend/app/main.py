@@ -1,3 +1,4 @@
+import asyncio
 import re
 from contextlib import asynccontextmanager
 from time import perf_counter
@@ -7,6 +8,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.agent.graph import build_agent_graph
+from app.api.a2a import a2a_router
 from app.api.errors import install_exception_handlers
 from app.api.routes import router
 from app.config import Settings, get_settings
@@ -27,6 +29,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.settings = resolved_settings
             app.state.memory_repository = persistence.memory_repository
             app.state.agent_graph = build_agent_graph(provider, persistence.checkpointer)
+            app.state.a2a_tasks = {}
+            app.state.a2a_tasks_lock = asyncio.Lock()
             yield
 
     app = FastAPI(
@@ -67,6 +71,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     install_exception_handlers(app)
     app.include_router(router)
+    app.include_router(a2a_router)
     return app
 
 
