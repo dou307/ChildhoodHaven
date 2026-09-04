@@ -19,6 +19,7 @@
 11. 使用 Alembic 管理业务表，并通过 PostgreSQL 持久化长期记忆和 LangGraph 检查点。
 12. 输出不含儿童原文的结构化请求与 Agent 节点耗时、状态和错误类型日志。
 13. 提供小艺云 A2A JSON-RPC/SSE 适配入口，与 HarmonyOS 应用复用同一套 Agent 大脑。
+14. HarmonyOS 儿童端采用“倾诉与追问 -> 单页绘本共读”的分阶段界面，并复用初赛概念稿的童话视觉资产。
 
 `mock` 模式只用于本地开发和自动化测试，所有响应都会明确标注模型模式。系统不会在百炼调用失败后静默返回伪造结果。
 
@@ -92,8 +93,8 @@ cd harmony
 
 ## 当前验证边界
 
-- 已验证：30 个后端测试、严格 checkpoint 反序列化、Docker PostgreSQL 跨重启持久化、后端镜像自动迁移启动、本地 Caddy HTTPS staging 全栈、真实 HTTP 冒烟请求、GitHub Actions CI、HarmonyOS 6.1.1(24) ArkTS 编译和未签名 HAP 打包。
-- 已编译但尚未真机验证：麦克风采集、离线中文识别、逐页离线 TTS、家长确认/查看/删除记忆界面。
+- 已验证：36 个后端测试、严格 checkpoint 反序列化、Docker PostgreSQL 跨重启持久化、后端镜像自动迁移启动、本地 Caddy HTTPS staging 全栈、真实 HTTP 冒烟请求、GitHub Actions CI、HarmonyOS 6.1.1(24) ArkTS 编译和未签名 HAP 打包。
+- 已编译但尚未真机验证：儿童倾诉与绘本共读界面、麦克风采集、离线中文识别、逐页离线 TTS、家长确认/查看/删除记忆界面。
 - 尚未验证：真实百炼 API 输出、HarmonyOS 真机安装和真实域名的公网 HTTPS 联调。
 - 尚未实现：家长身份认证、主动回访、绘本插画素材与朗读同步高亮。
 

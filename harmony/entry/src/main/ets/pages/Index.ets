@@ -196,6 +196,7 @@ struct Index {
     };
     try {
       this.applyResult(await AgentApi.createTurn(this.conversationId, payload));
+      this.message = '';
       this.pendingTurnId = '';
       this.pendingTurnMessage = '';
     } catch (error) {
@@ -323,73 +324,78 @@ struct Index {
   }
 
   build() {
-    Scroll() {
-      Column({ space: 20 }) {
-        Row() {
-          Column({ space: 4 }) {
-            Text('童心译站').fontSize(28).fontWeight(FontWeight.Bold).fontColor('#24302B')
-            Text(this.appMode === 'child' ? '小星星正在听' : '家长陪伴模式')
-              .fontSize(14).fontColor('#5E6C65')
-          }.alignItems(HorizontalAlign.Start)
-          Blank()
-          if (this.appMode === 'child') {
-            Button('家长入口').width(88).height(36).fontSize(14).fontColor('#285943')
-              .backgroundColor('#EAF3EE').onClick(() => this.openGuardianMode())
-            Button('新对话').width(76).height(36).fontSize(14).fontColor('#285943')
-              .backgroundColor('#EAF3EE').margin({ left: 8 }).enabled(!this.loading)
-              .onClick(() => this.startNewConversation())
-          } else {
-            Button('返回儿童').width(88).height(36).fontSize(14).fontColor('#285943')
-              .backgroundColor('#EAF3EE').onClick(() => this.returnToChildMode())
-          }
-        }.width('100%')
+    Stack() {
+      if (this.appMode === 'child') {
+        ChildModeView({ message: $message, childReply: this.childReply, loading: this.loading,
+          speechState: this.speechState, speechError: this.speechError,
+          errorMessage: this.errorMessage, riskLevel: this.riskLevel, riskReason: this.riskReason,
+          storyTitle: this.storyTitle, storyPages: this.storyPages,
+          playbackState: this.playbackState, speakingPageNumber: this.speakingPageNumber,
+          playbackError: this.playbackError, serviceState: this.serviceState,
+          onToggleSpeech: (): void => { this.toggleSpeech(); },
+          onSubmit: (): void => { this.submit(); },
+          onTogglePagePlayback: (page: StoryPage): void => { this.togglePagePlayback(page); },
+          onOpenGuardian: (): void => { this.openGuardianMode(); },
+          onStartNewConversation: (): void => { this.startNewConversation(); },
+          onRetryService: (): void => { this.checkService(); } })
+      } else {
+        Scroll() {
+          Column({ space: 20 }) {
+            Row() {
+              Column({ space: 4 }) {
+                Text('童心译站').fontSize(28).fontWeight(FontWeight.Bold).fontColor('#24302B')
+                Text('家长陪伴模式').fontSize(14).fontColor('#5E6C65')
+              }.alignItems(HorizontalAlign.Start)
+              Blank()
+              Button('返回儿童').width(88).height(36).fontSize(14).fontColor('#285943')
+                .backgroundColor('#EAF3EE').onClick(() => this.returnToChildMode())
+            }.width('100%')
 
-        Row({ space: 8 }) {
-          Text(this.serviceState === 'online' ? '在线' :
-            (this.serviceState === 'checking' ? '检查中' : '离线'))
-            .fontSize(12).fontColor(this.serviceState === 'online' ? '#285943' : '#8C2F27')
-          Text(this.serviceSummary).layoutWeight(1).fontSize(12).fontColor('#68756F')
-          if (this.serviceState === 'offline') {
-            Button('重试').width(64).height(32).fontSize(13).fontColor('#285943')
-              .backgroundColor('#EAF3EE').onClick(() => this.checkService())
-          }
-        }.width('100%').padding({ left: 10, right: 10, top: 8, bottom: 8 })
-          .backgroundColor(this.serviceState === 'online' ? '#EAF3EE' : '#FFF2F0').borderRadius(6)
+            Row({ space: 8 }) {
+              Text(this.serviceState === 'online' ? '在线' :
+                (this.serviceState === 'checking' ? '检查中' : '离线'))
+                .fontSize(12).fontColor(this.serviceState === 'online' ? '#285943' : '#8C2F27')
+              Text(this.serviceSummary).layoutWeight(1).fontSize(12).fontColor('#68756F')
+              if (this.serviceState === 'offline') {
+                Button('重试').width(64).height(32).fontSize(13).fontColor('#285943')
+                  .backgroundColor('#EAF3EE').onClick(() => this.checkService())
+              }
+            }.width('100%').padding({ left: 10, right: 10, top: 8, bottom: 8 })
+              .backgroundColor(this.serviceState === 'online' ? '#EAF3EE' : '#FFF2F0').borderRadius(6)
 
-        if (this.appMode === 'child') {
-          ChildModeView({ message: $message, childReply: this.childReply, loading: this.loading,
-            speechState: this.speechState, speechError: this.speechError,
-            errorMessage: this.errorMessage, riskLevel: this.riskLevel, riskReason: this.riskReason,
-            storyTitle: this.storyTitle, storyPages: this.storyPages,
-            playbackState: this.playbackState, speakingPageNumber: this.speakingPageNumber,
-            playbackError: this.playbackError,
-            onToggleSpeech: (): void => { this.toggleSpeech(); },
-            onSubmit: (): void => { this.submit(); },
-            onTogglePagePlayback: (page: StoryPage): void => { this.togglePagePlayback(page); } })
-        } else if (this.appMode === 'guardian') {
-          GuardianModeView({ childNickname: $childNickname, childAge: $childAge,
-            riskLevel: this.riskLevel, riskReason: this.riskReason,
-            parentObservation: this.parentObservation, parentResponse: this.parentResponse,
-            parentQuestion: this.parentQuestion, parentNextAction: this.parentNextAction,
-            parentDisclaimer: this.parentDisclaimer, hasMemoryCandidate: this.hasMemoryCandidate,
-            memoryCandidateSummary: this.memoryCandidateSummary,
-            memoryCandidateReason: this.memoryCandidateReason, memorySaving: this.memorySaving,
-            memoriesLoading: this.memoriesLoading, confirmedMemories: this.confirmedMemories,
-            pendingDeleteMemoryId: this.pendingDeleteMemoryId, memoryMessage: this.memoryMessage,
-            memoryError: this.memoryError, provider: this.provider, action: this.action,
-            traceItems: this.traceItems, showTrace: $showTrace,
-            onChangePin: (): void => { this.changeGuardianPin(); },
-            onConfirmMemory: (): void => { this.confirmMemory(); },
-            onDiscardMemory: (): void => { this.discardMemoryCandidate(); },
-            onLoadMemories: (): void => { this.loadMemories(); },
-            onDeleteMemory: (memoryId: string): void => { this.deleteMemory(memoryId); } })
-        } else {
-          GuardianGateView({ mode: this.appMode as GuardianGateMode, pinInput: $pinInput,
-            pinConfirmation: $pinConfirmation, pinError: $pinError,
-            onUnlock: (): void => { this.unlockGuardianMode(); },
-            onSave: (): void => { this.saveGuardianPin(); } })
+            if (this.appMode === 'guardian') {
+              GuardianModeView({ childNickname: $childNickname, childAge: $childAge,
+                riskLevel: this.riskLevel, riskReason: this.riskReason,
+                parentObservation: this.parentObservation, parentResponse: this.parentResponse,
+                parentQuestion: this.parentQuestion, parentNextAction: this.parentNextAction,
+                parentDisclaimer: this.parentDisclaimer, hasMemoryCandidate: this.hasMemoryCandidate,
+                memoryCandidateSummary: this.memoryCandidateSummary,
+                memoryCandidateReason: this.memoryCandidateReason, memorySaving: this.memorySaving,
+                memoriesLoading: this.memoriesLoading, confirmedMemories: this.confirmedMemories,
+                pendingDeleteMemoryId: this.pendingDeleteMemoryId, memoryMessage: this.memoryMessage,
+                memoryError: this.memoryError, provider: this.provider, action: this.action,
+                traceItems: this.traceItems, showTrace: $showTrace,
+                onChangePin: (): void => { this.changeGuardianPin(); },
+                onConfirmMemory: (): void => { this.confirmMemory(); },
+                onDiscardMemory: (): void => { this.discardMemoryCandidate(); },
+                onLoadMemories: (): void => { this.loadMemories(); },
+                onDeleteMemory: (memoryId: string): void => { this.deleteMemory(memoryId); } })
+            } else {
+              GuardianGateView({ mode: this.appMode as GuardianGateMode, pinInput: $pinInput,
+                pinConfirmation: $pinConfirmation, pinError: $pinError,
+                onUnlock: (): void => { this.unlockGuardianMode(); },
+                onSave: (): void => { this.saveGuardianPin(); } })
+            }
+          }
+          .width('100%')
+          .padding({ left: 20, right: 20, top: 28, bottom: 36 })
         }
-      }.width('100%').padding({ left: 20, right: 20, top: 28, bottom: 36 })
-    }.width('100%').height('100%').backgroundColor('#F7F7F3')
+        .width('100%')
+        .height('100%')
+        .backgroundColor('#F7F7F3')
+      }
+    }
+    .width('100%')
+    .height('100%')
   }
 }
